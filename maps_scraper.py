@@ -2,67 +2,43 @@ print("SCRIPT STARTED")
 
 import requests
 import re
-import json
+from bs4 import BeautifulSoup
 import time
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 }
 
-def search_maps(query, num_results=20):
-    print(f"Searching Google Maps for: {query}")
+def google_search(query):
+    print(f"Searching Google for: {query}")
 
-    url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}"
+    url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
     r = requests.get(url, headers=HEADERS)
-    html = r.text
-
-    # Extract the JSON blob inside "APP_INITIALIZATION_STATE"
-    match = re.search(r"APP_INITIALIZATION_STATE=(.*?);window.APP", html)
-    if not match:
-        print("Could not find JSON in page")
-        return []
-
-    try:
-        data = json.loads(match.group(1))
-    except:
-        print("Failed to parse JSON blob")
-        return []
-
-    # Navigate the structure
-    try:
-        items = data[3][6][0]
-    except:
-        print("Google changed structure again")
-        return []
+    soup = BeautifulSoup(r.text, "html.parser")
 
     results = []
-    for item in items:
-        try:
-            name = item[14][11]
-            address = item[14][2][0]
-            website = item[14][7][0] if item[14][7] else None
-            phone = item[14][3][0] if item[14][3] else None
 
-            results.append({
-                "name": name,
-                "address": address,
-                "website": website,
-                "phone": phone
-            })
-        except:
+    for g in soup.select("div.g"):
+        name = g.select_one("h3")
+        link = g.select_one("a")
+        snippet = g.select_one(".VwiC3b")
+
+        if not name or not link:
             continue
 
-        if len(results) >= num_results:
-            break
+        website = link["href"]
+
+        results.append({
+            "name": name.text,
+            "website": website,
+            "snippet": snippet.text if snippet else None
+        })
 
     print(f"Found {len(results)} results")
     return results
 
 
-def extract_emails_from_website(url):
-    if not url:
-        return None
-
+def extract_emails(url):
     print(f"Extracting emails from: {url}")
 
     try:
@@ -77,11 +53,11 @@ def extract_emails_from_website(url):
 def run_scraper():
     query = "coffee shops in tampa"
 
-    results = search_maps(query)
+    results = google_search(query)
 
     final_data = []
     for biz in results:
-        emails = extract_emails_from_website(biz["website"])
+        emails = extract_emails(biz["website"])
         biz["emails"] = emails
         final_data.append(biz)
         time.sleep(1)
