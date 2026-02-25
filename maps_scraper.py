@@ -12,28 +12,36 @@ HEADERS = {
 def search_maps(query, num_results=20):
     print(f"Searching Google Maps for: {query}")
 
-    url = (
-        "https://www.google.com/maps/preview/search?"
-        f"q={query.replace(' ', '+')}"
-    )
-
+    url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}"
     r = requests.get(url, headers=HEADERS)
-    raw = r.text
+    html = r.text
 
-    # Extract JSON from the response
+    # Extract the JSON blob inside "APP_INITIALIZATION_STATE"
+    match = re.search(r"APP_INITIALIZATION_STATE=(.*?);window.APP", html)
+    if not match:
+        print("Could not find JSON in page")
+        return []
+
     try:
-        data = json.loads(raw[raw.find("/*") + 2 : raw.rfind("*/")])
+        data = json.loads(match.group(1))
     except:
-        print("Failed to parse Google Maps response")
+        print("Failed to parse JSON blob")
+        return []
+
+    # Navigate the structure
+    try:
+        items = data[3][6][0]
+    except:
+        print("Google changed structure again")
         return []
 
     results = []
-    for item in data[0][1][0][14][0]:
+    for item in items:
         try:
-            name = item[5][0][1]
-            address = item[5][0][2]
-            website = item[5][0][3][0] if item[5][0][3] else None
-            phone = item[5][0][4][0] if item[5][0][4] else None
+            name = item[14][11]
+            address = item[14][2][0]
+            website = item[14][7][0] if item[14][7] else None
+            phone = item[14][3][0] if item[14][3] else None
 
             results.append({
                 "name": name,
