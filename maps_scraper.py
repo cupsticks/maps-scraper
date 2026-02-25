@@ -5,20 +5,27 @@ from bs4 import BeautifulSoup
 import re
 import time
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-}
+SCRAPER_API_KEY = "YOUR_API_KEY_HERE"
 
-def scrape_yelp(query, location, pages=5):
+def proxy_get(url):
+    proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}"
+    return requests.get(proxy_url, timeout=30)
+
+def scrape_yelp(query, location, pages=10):
     print(f"Scraping Yelp for: {query} in {location}")
 
     results = []
 
     for page in range(pages):
-        url = f"https://www.yelp.com/search?find_desc={query.replace(' ', '+')}&find_loc={location.replace(' ', '+')}&start={page*10}"
-        print("Fetching:", url)
+        url = (
+            "https://www.yelp.com/search?"
+            f"find_desc={query.replace(' ', '+')}"
+            f"&find_loc={location.replace(' ', '+')}"
+            f"&start={page*10}"
+        )
 
-        r = requests.get(url, headers=HEADERS)
+        print("Fetching:", url)
+        r = proxy_get(url)
         soup = BeautifulSoup(r.text, "html.parser")
 
         businesses = soup.select("div.container__09f24__21w3G")
@@ -52,7 +59,7 @@ def extract_emails(url):
     print(f"Extracting emails from: {url}")
 
     try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
+        r = proxy_get(url)
     except:
         return None
 
@@ -64,7 +71,7 @@ def run_scraper():
     query = "coffee shops"
     location = "Tampa, FL"
 
-    yelp_results = scrape_yelp(query, location, pages=10)  # 10 pages = ~100 results
+    yelp_results = scrape_yelp(query, location, pages=10)
 
     final_data = []
     for biz in yelp_results:
