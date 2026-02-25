@@ -1,54 +1,86 @@
 print("SCRIPT STARTED")
 
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+import requests
+import re
+import json
 import time
 
-def create_driver():
-    print("Setting Chrome options...")
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+}
 
-    chrome_path = "/usr/bin/chromium-browser"
-    driver_path = "/usr/local/bin/chromedriver"
+def search_maps(query, num_results=20):
+    print(f"Searching Google Maps for: {query}")
 
-    options = Options()
-    options.binary_location = chrome_path
+    url = (
+        "https://www.google.com/maps/preview/search?"
+        f"q={query.replace(' ', '+')}"
+    )
 
-    # Required for Render
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--remote-debugging-port=9222")
+    r = requests.get(url, headers=HEADERS)
+    raw = r.text
 
-    print("Launching Chrome...")
-    service = Service(driver_path)
-    driver = webdriver.Chrome(service=service, options=options)
+    # Extract JSON from the response
+    try:
+        data = json.loads(raw[raw.find("/*") + 2 : raw.rfind("*/")])
+    except:
+        print("Failed to parse Google Maps response")
+        return []
 
-    print("Chrome launched successfully!")
-    return driver
+    results = []
+    for item in data[0][1][0][14][0]:
+        try:
+            name = item[5][0][1]
+            address = item[5][0][2]
+            website = item[5][0][3][0] if item[5][0][3] else None
+            phone = item[5][0][4][0] if item[5][0][4] else None
+
+            results.append({
+                "name": name,
+                "address": address,
+                "website": website,
+                "phone": phone
+            })
+        except:
+            continue
+
+        if len(results) >= num_results:
+            break
+
+    print(f"Found {len(results)} results")
+    return results
+
+
+def extract_emails_from_website(url):
+    if not url:
+        return None
+
+    print(f"Extracting emails from: {url}")
+
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+    except:
+        return None
+
+    emails = re.findall(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", r.text)
+    return list(set(emails)) if emails else None
 
 
 def run_scraper():
-    try:
-        driver = create_driver()
+    query = "coffee shops in tampa"
 
-        print("Opening Google...")
-        driver.get("https://www.google.com")
-        time.sleep(3)
+    results = search_maps(query)
 
-        print("Page title:", driver.title)
-        print("Scraper finished successfully!")
+    final_data = []
+    for biz in results:
+        emails = extract_emails_from_website(biz["website"])
+        biz["emails"] = emails
+        final_data.append(biz)
+        time.sleep(1)
 
-    except Exception as e:
-        print("ERROR:", e)
-
-    finally:
-        try:
-            driver.quit()
-            print("Chrome closed.")
-        except:
-            pass
+    print("\nFINAL RESULTS:")
+    for biz in final_data:
+        print(biz)
 
 
 if __name__ == "__main__":
