@@ -2,6 +2,7 @@ services:
   - type: worker
     name: maps-scraper
     env: python
+    runtime: python3.11
     buildCommand: |
       apt-get update
       apt-get install -y chromium
