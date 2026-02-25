@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: yelp-scraper
+    name: yelp-scraper-debug
     env: python
     runtime: python3.11
     buildCommand: pip install -r requirements.txt
