@@ -9,7 +9,7 @@ def create_driver():
     print("Setting Chrome options...")
 
     chrome_path = "/usr/bin/chromium-browser"
-    driver_path = "/usr/bin/chromedriver"
+    driver_path = "/usr/local/bin/chromedriver"
 
     options = Options()
     options.binary_location = chrome_path
