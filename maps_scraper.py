@@ -1,15 +1,41 @@
-print("SCRIPT STARTED")  # Must appear in Render logs immediately
+print("SCRIPT STARTED")
 
+import shutil
 import undetected_chromedriver as uc
 import time
 
 def create_driver():
     print("Setting up Chrome options...")
 
-    options = uc.ChromeOptions()
+    # Try all common Chromium paths
+    possible_paths = [
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        shutil.which("chromium"),
+        shutil.which("chromium-browser"),
+        shutil.which("google-chrome"),
+        shutil.which("google-chrome-stable"),
+    ]
 
-    # REQUIRED: Tell Selenium where Chromium is installed on Render
-    options.binary_location = "/usr/bin/chromium"
+    possible_paths = [p for p in possible_paths if p]
+
+    print("Checking for Chromium binary...")
+    chromium_path = None
+    for path in possible_paths:
+        print("Testing:", path)
+        if path:
+            chromium_path = path
+            break
+
+    if not chromium_path:
+        raise Exception("Chromium binary not found on system.")
+
+    print("Chromium found at:", chromium_path)
+
+    options = uc.ChromeOptions()
+    options.binary_location = chromium_path
 
     # REQUIRED flags for Render
     options.add_argument("--headless=new")
@@ -19,10 +45,6 @@ def create_driver():
     options.add_argument("--disable-software-rasterizer")
     options.add_argument("--disable-dev-tools")
     options.add_argument("--remote-debugging-port=9222")
-
-    # Optional but helpful
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-blink-features=AutomationControlled")
 
     print("Launching Chrome...")
     driver = uc.Chrome(options=options)
