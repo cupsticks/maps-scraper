@@ -1,103 +1,56 @@
-print("Scraper started on Render...")
+print("SCRIPT STARTED")  # Must appear in Render logs immediately
 
-import time
-import re
-import pandas as pd
-import requests
-from bs4 import BeautifulSoup
 import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
+import time
 
-SEARCH_QUERY = "gift shops in Tampa, FL"
-SCROLL_COUNT = 30  # how many scrolls to load more results
+def create_driver():
+    print("Setting up Chrome options...")
 
+    options = uc.ChromeOptions()
 
-def extract_emails_from_website(url):
-    if not url:
-        return []
+    # REQUIRED: Tell Selenium where Chromium is installed on Render
+    options.binary_location = "/usr/bin/chromium"
 
-    try:
-        html = requests.get(url, timeout=10).text
-        emails = re.findall(
-            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-            html
-        )
-        return list(set(emails))
-    except:
-        return []
+    # REQUIRED flags for Render
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-dev-tools")
+    options.add_argument("--remote-debugging-port=9222")
+
+    # Optional but helpful
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    print("Launching Chrome...")
+    driver = uc.Chrome(options=options)
+    print("Chrome launched successfully!")
+
+    return driver
 
 
 def run_scraper():
-    options = uc.ChromeOptions()
-    options.add_argument("--headless=new")
-    driver = uc.Chrome(options=options)
+    try:
+        driver = create_driver()
 
-    print("Opening Google Maps...")
-    driver.get("https://www.google.com/maps")
-    time.sleep(3)
+        print("Opening Google...")
+        driver.get("https://www.google.com")
+        time.sleep(3)
 
-    print("Searching...")
-    search_box = driver.find_element(By.ID, "searchboxinput")
-    search_box.send_keys(SEARCH_QUERY)
-    search_box.send_keys(Keys.ENTER)
-    time.sleep(5)
+        print("Page title:", driver.title)
+        print("Scraper finished successfully!")
 
-    # Scroll results
-    results_panel = driver.find_element(By.XPATH, "//div[contains(@aria-label,'Results')]")
+    except Exception as e:
+        print("ERROR:", e)
 
-    for _ in range(SCROLL_COUNT):
-        driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", results_panel)
-        time.sleep(1)
-
-    print("Collecting business listings...")
-    listings = driver.find_elements(By.XPATH, "//a[contains(@href,'/maps/place')]")
-
-    data = []
-
-    for listing in listings:
+    finally:
         try:
-            listing.click()
-            time.sleep(3)
-
-            name = driver.find_element(By.XPATH, "//h1").text
-
-            website = ""
-            phone = ""
-            address = ""
-
-            info_elements = driver.find_elements(By.XPATH, "//button[contains(@aria-label,'Website') or contains(@aria-label,'Phone') or contains(@aria-label,'Address')]")
-
-            for el in info_elements:
-                label = el.get_attribute("aria-label")
-                if "Website" in label:
-                    website = label.replace("Website: ", "")
-                elif "Phone" in label:
-                    phone = label.replace("Phone: ", "")
-                elif "Address" in label:
-                    address = label.replace("Address: ", "")
-
-            emails = extract_emails_from_website(website)
-
-            data.append({
-                "Name": name,
-                "Website": website,
-                "Phone": phone,
-                "Address": address,
-                "Emails": ", ".join(emails)
-            })
-
-            print(f"Scraped: {name}")
-
-        except Exception as e:
-            print("Error:", e)
-            continue
-
-    df = pd.DataFrame(data)
-    df.to_csv("emails.csv", index=False)
-    print("Saved emails.csv")
-
-    driver.quit()
+            driver.quit()
+            print("Chrome closed.")
+        except:
+            pass
 
 
 if __name__ == "__main__":
