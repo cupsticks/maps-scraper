@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: maps-scraper
+    name: yelp-scraper
     env: python
     runtime: python3.11
     buildCommand: pip install -r requirements.txt
