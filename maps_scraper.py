@@ -5,11 +5,12 @@ from bs4 import BeautifulSoup
 import re
 import time
 
+# 👉 Put your real ScraperAPI key here
 SCRAPER_API_KEY = "0ebb6acaf4d5e302329a5521e36dbbfc"
 
 def proxy_get(url):
-    proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}"
-    return requests.get(proxy_url, timeout=30)
+    proxy_url = f"https://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}"
+    return requests.get(proxy_url, timeout=60)
 
 def scrape_yelp(query, location, pages=10):
     print(f"Scraping Yelp for: {query} in {location}")
@@ -28,6 +29,7 @@ def scrape_yelp(query, location, pages=10):
         r = proxy_get(url)
         soup = BeautifulSoup(r.text, "html.parser")
 
+        # Container selector may need adjustment over time
         businesses = soup.select("div.container__09f24__21w3G")
 
         for biz in businesses:
@@ -53,7 +55,7 @@ def scrape_yelp(query, location, pages=10):
 
 
 def extract_emails(url):
-    if not url or "yelp" in url:
+    if not url or "yelp.com" in url:
         return None
 
     print(f"Extracting emails from: {url}")
@@ -68,6 +70,7 @@ def extract_emails(url):
 
 
 def run_scraper():
+    # 👉 You can change these to any category/city
     query = "coffee shops"
     location = "Tampa, FL"
 
@@ -87,4 +90,3 @@ def run_scraper():
 
 if __name__ == "__main__":
     run_scraper()
-
