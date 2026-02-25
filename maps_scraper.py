@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import re
 import time
 
-SCRAPER_API_KEY = "YOUR_API_KEY_HERE"
+SCRAPER_API_KEY = "0ebb6acaf4d5e302329a5521e36dbbfc"
 
 def proxy_get(url):
     proxy_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}"
@@ -87,3 +87,4 @@ def run_scraper():
 
 if __name__ == "__main__":
     run_scraper()
+
